@@ -4,15 +4,16 @@
 #include <SD.h>
 #include <Wire.h>
 #include "RTClib.h"
+#include "QList.h"
+
 
 // TEMPERATURE SENSOR & VARIABLES
-#define DHT11_PIN       2
+#define DHT11_PIN 2
 DHTStable DHT;
-char buff[20];
 
 // RTC VARIABLES
 RTC_DS1307 RTC;
-DateTime bootDateTime = DateTime(__DATE__, __TIME__);
+DateTime bootDateTime;
 
 // DATA LOGGER BOARD SS PIN
 const int chipSelect = 10;
@@ -22,11 +23,12 @@ const char* filename = "data.csv";
 File myFile;
 
 // TFT LCD 1.77" SCREEN 
-#define cs   7
-#define dc   6
-#define rst  5
-TFT lcd = TFT(cs, dc, rst);
+TFT lcd = TFT(7, 6, 5);
 
+QList<byte> temp24h;
+QList<byte> temp7d;
+QList<byte> humi24h;
+QList<byte> humi7d;
 
 void setup() {
   
@@ -39,20 +41,23 @@ void setup() {
   initDHT();
   
   clearLCD();
+  Serial.println(F("setup() OK"));
 }
 
 
-char _buffer1[7];
-char _buffer2[7];
-char _buffer_bootdate[20];
-char _buffer_temp_max_boot[6];
-char _buffer_temp_min_boot[6];
-char _buffer_humi_max_boot[6];
-char _buffer_humi_min_boot[6];
 
 byte minTemp, maxTemp, minHumi, maxHumi;
 
 void loop() {
+    Serial.println(F("loop() call"));
+
+  char _buffer1[7];
+  char _buffer2[7];
+  char _buffer_bootdate[9];
+  char _buffer_temp_max_boot[6];
+  char _buffer_temp_min_boot[6];
+  char _buffer_humi_max_boot[6];
+  char _buffer_humi_min_boot[6];
   
   String data = "";
   
@@ -60,21 +65,23 @@ void loop() {
   
   switch (check) {
     case DHTLIB_OK:  
-      data += "OK;"; 
+      data += F("OK;"); 
       break;
       
     case DHTLIB_ERROR_CHECKSUM: 
-      data += "Checksum error;"; 
+      data += F("Checksum error;"); 
       break;
       
     case DHTLIB_ERROR_TIMEOUT: 
-      data += "Time out error;"; 
+      data += F("Time out error;"); 
       break;
       
     default: 
-      data += "Unknown error;"; 
+      data += F("Unknown error;"); 
       break;
   }
+  
+  DateTime now = RTC.now();
 
   byte currTemp = (int)DHT.getTemperature();
   byte currHumi = (int)DHT.getHumidity();
@@ -91,9 +98,31 @@ void loop() {
   }
   
     
-  DateTime now = RTC.now();
 
+  /*for (int n = 0; n < temp7d.length(); n++) {
+    Serial.print(temp7d[n]+",");
+  }
+  Serial.println(".");*/
+
+  temp7d.push_front(currTemp);
+  if(temp7d.size() > 168) {
+    temp7d.pop_back(); 
+  }
   
+  humi7d.push_front(currHumi);
+  if(humi7d.size() > 168) {
+    humi7d.pop_back(); 
+  }
+
+  temp24h.push_front(currTemp);
+  if(temp24h.size() > 24) {
+    temp24h.pop_back(); 
+  }
+  
+  humi24h.push_front(currHumi);
+  if(humi24h.size() > 24) {
+    humi24h.pop_back(); 
+  }
   
   /*data += now.timestamp();
   data += ";";
@@ -204,6 +233,8 @@ void initDHT() {
   maxTemp = (int)DHT.getTemperature();
   minHumi = (int)DHT.getHumidity();
   maxHumi = (int)DHT.getHumidity();
+  
+  Serial.println(F("DHT sensor... OK"));
 }
 
 void initDatafile() {
@@ -229,9 +260,10 @@ void initDatafile() {
     
   } else {
       lcd.text("CSV file found.", 0, 30);
+    Serial.println(F("CSV file found."));
   }
   
-  myFile.print("REBOOTED;");
+  myFile.print(F("REBOOTED;"));
   myFile.print(__DATE__);
   myFile.print(" ");
   myFile.print(__TIME__);
@@ -248,6 +280,7 @@ void initLCD() {
   lcd.stroke(255, 255, 255);
   lcd.setTextSize(1);
   lcd.text("TFT screen... OK", 0, 0);
+    Serial.println(F("TFT screen... OK"));
 }
 
 void initSDcard() {
@@ -259,7 +292,7 @@ void initSDcard() {
     while(1);
   }
   
-  Serial.println(F("SD card initialized."));
+  Serial.println(F("SD card... OK"));
   lcd.text("SD card... OK\n", 0, 10);
 }
 
@@ -268,10 +301,12 @@ void initRTC() {
   RTC.begin();
 
   if (!RTC.isrunning()) {
-    Serial.println("RTC is NOT running, let's set the time!");
+    Serial.println(F("RTC is NOT running, let's set the time!"));
     // When time needs to be set on a new device, or after a power loss, the
     // following line sets the RTC to the date & time this sketch was compiled
-    RTC.adjust(bootDateTime);
+    RTC.adjust(DateTime(__DATE__, __TIME__));
   }
+  bootDateTime = RTC.now();
   lcd.text("RTC clock... OK\n", 0, 20);
+  Serial.println(F("RTC clock... OK"));
 }
