@@ -4,7 +4,6 @@
 #include <SD.h>
 #include <Wire.h>
 #include "RTClib.h"
-#include "QList.h"
 
 
 // TEMPERATURE SENSOR & VARIABLES
@@ -13,7 +12,6 @@ DHTStable DHT;
 
 // RTC VARIABLES
 RTC_DS1307 RTC;
-DateTime bootDateTime;
 
 // DATA LOGGER BOARD SS PIN
 const int chipSelect = 10;
@@ -25,10 +23,10 @@ File myFile;
 // TFT LCD 1.77" SCREEN 
 TFT lcd = TFT(7, 6, 5);
 
-QList<byte> temp24h;
-QList<byte> temp7d;
-QList<byte> humi24h;
-QList<byte> humi7d;
+#define ARR_SIZE_7D 168
+
+byte temp7d[ARR_SIZE_7D];
+byte humi7d[ARR_SIZE_7D];
 
 void setup() {
   
@@ -42,27 +40,57 @@ void setup() {
   
   clearLCD();
   Serial.println(F("setup() OK"));
+
+  DateTime bootDateTime = RTC.now();
+
+  lcd.stroke(255,255,255);
+  lcd.setTextSize(1);
+  lcd.text("Now:", 20, 12);
+  lcd.text("24h:", 30, 38);
+  lcd.text(" 7d:", 30, 70);
+  lcd.text("Since:", 13, 93);
+  char _buffer_bootdate[9];
+  sprintf(_buffer_bootdate, "%02d/%02d/%02d", bootDateTime.year()-2000, bootDateTime.month(), bootDateTime.day() );
+  lcd.text(_buffer_bootdate, 6, 103);
+  sprintf(_buffer_bootdate, "%02d:%02d", bootDateTime.hour(), bootDateTime.minute());
+  lcd.text(_buffer_bootdate, 15, 113);
 }
 
-
+void shiftvals() {
+    memmove(&temp7d[1], &temp7d[0], (ARR_SIZE_7D - 1) * sizeof(temp7d[0]));
+    memmove(&humi7d[1], &humi7d[0], (ARR_SIZE_7D - 1) * sizeof(humi7d[0]));
+    /*Serial.print(F("TEMP: "));
+    for (unsigned int i = 0; i < (sizeof(temp7d) / sizeof(temp7d[0])); i++)
+    {
+        Serial.print(temp7d[i]);
+        Serial.print(",");
+    }
+    Serial.println();
+    Serial.print(F("HUMI: "));
+    for (unsigned int i = 0; i < (sizeof(humi7d) / sizeof(humi7d[0])); i++)
+    {
+        Serial.print(humi7d[i]);
+        Serial.print(",");
+    }
+    Serial.println();*/
+}
 
 byte minTemp, maxTemp, minHumi, maxHumi;
 
 void loop() {
-    Serial.println(F("loop() call"));
+  Serial.println(F("loop() call"));
 
   char _buffer1[7];
   char _buffer2[7];
-  char _buffer_bootdate[9];
   char _buffer_temp_max_boot[6];
   char _buffer_temp_min_boot[6];
   char _buffer_humi_max_boot[6];
   char _buffer_humi_min_boot[6];
   
-  String data = "";
   
   int check = DHT.read11(DHT11_PIN);
   
+  String data = "";
   switch (check) {
     case DHTLIB_OK:  
       data += F("OK;"); 
@@ -97,38 +125,43 @@ void loop() {
     minHumi = currHumi;
   }
   
-    
+  shiftvals();
 
-  /*for (int n = 0; n < temp7d.length(); n++) {
-    Serial.print(temp7d[n]+",");
-  }
-  Serial.println(".");*/
+  temp7d[0] = currTemp;
+  humi7d[0] = currHumi;
 
-  temp7d.push_front(currTemp);
-  if(temp7d.size() > 168) {
-    temp7d.pop_back(); 
+  byte mintemp24 = currTemp;
+  byte mintemp7d = currTemp;
+  byte maxtemp24 = currTemp;
+  byte maxtemp7d = currTemp;
+  
+  byte minhumi24 = currHumi;
+  byte minhumi7d = currHumi;
+  byte maxhumi24 = currHumi;
+  byte maxhumi7d = currHumi;
+
+  for (int n = 0; n < (sizeof(temp7d) / sizeof(temp7d[0])); n++) {
+    byte tmp = temp7d[n];
+    if(mintemp7d > tmp) {
+      mintemp7d = temp7d[n];
+    } else if(maxtemp7d < tmp) {
+      maxtemp7d = tmp;
+    }
+
+    if(n <= 24) {
+      if(mintemp24 > tmp) {
+        mintemp24 = temp7d[n];
+      } else if(maxtemp24 < tmp) {
+        maxtemp24 = tmp;
+      }
+    }
   }
   
-  humi7d.push_front(currHumi);
-  if(humi7d.size() > 168) {
-    humi7d.pop_back(); 
-  }
-
-  temp24h.push_front(currTemp);
-  if(temp24h.size() > 24) {
-    temp24h.pop_back(); 
-  }
-  
-  humi24h.push_front(currHumi);
-  if(humi24h.size() > 24) {
-    humi24h.pop_back(); 
-  }
-  
-  /*data += now.timestamp();
+  data += now.unixtime();
   data += ";";
-  data += humi;
+  data += currTemp;
   data += ";";
-  data += temp;
+  data += currHumi;
 
   File dataFile = SD.open(filename, FILE_WRITE);
   if (dataFile) {
@@ -140,23 +173,11 @@ void loop() {
   else {
     Serial.print("error opening ");
     Serial.println(filename);
-  }*/
+  }
 
   int baseValX = 70; int baseValY = 32;
 
   lcd.stroke(255,255,255);
-  
-  lcd.setTextSize(1);
-  lcd.text("Now:", baseValX-50, 12);
-  lcd.text("24h:", baseValX-40, 38);
-  lcd.text(" 7d:", baseValX-40, 70);
-
-  lcd.text("Since:", baseValX-57, 93);
-  sprintf(_buffer_bootdate, "%02d/%02d/%02d", bootDateTime.year()-2000, bootDateTime.month(), bootDateTime.day() );
-  lcd.text(_buffer_bootdate, baseValX-64, 103);
-  sprintf(_buffer_bootdate, "%02d:%02d", bootDateTime.hour(), bootDateTime.minute());
-  lcd.text(_buffer_bootdate, baseValX-55, 113);
-
   lcd.setTextSize(2);
   
   sprintf(_buffer1, "%d\367C", currTemp);
@@ -167,22 +188,22 @@ void loop() {
   lcd.setTextSize(1); 
   
   lcd.stroke(252, 73, 28);
-  lcd.text("00\367C", baseValX, baseValY);
-  lcd.text("00\367C", baseValX, baseValY+35);
+  lcd.text("01\367C", baseValX, baseValY);
+  lcd.text("02\367C", baseValX, baseValY+35);
   sprintf(_buffer_temp_max_boot, "%d\367C", maxTemp);
   lcd.text(_buffer_temp_max_boot, baseValX, baseValY+70);
-  lcd.text("00%", baseValX+50, baseValY);
-  lcd.text("00%", baseValX+50, baseValY+35);
+  lcd.text("03%", baseValX+50, baseValY);
+  lcd.text("04%", baseValX+50, baseValY+35);
   sprintf(_buffer_humi_max_boot, "%d%%", maxHumi);
   lcd.text(_buffer_humi_max_boot, baseValX+50, baseValY+70);
   
   lcd.stroke(84, 241, 255);
-  lcd.text("00\367C", baseValX, baseValY+12);
-  lcd.text("00\367C", baseValX, baseValY+47);
+  lcd.text("05\367C", baseValX, baseValY+12);
+  lcd.text("06\367C", baseValX, baseValY+47);
   sprintf(_buffer_temp_min_boot, "%d\367C", minTemp);
   lcd.text(_buffer_temp_min_boot, baseValX, baseValY+82);
-  lcd.text("00%", baseValX+50, baseValY+12);
-  lcd.text("00%", baseValX+50, baseValY+47);
+  lcd.text("07%", baseValX+50, baseValY+12);
+  lcd.text("08%", baseValX+50, baseValY+47);
   sprintf(_buffer_humi_min_boot, "%d%%", minHumi);
   lcd.text(_buffer_humi_min_boot, baseValX+50, baseValY+82);
 
@@ -306,7 +327,6 @@ void initRTC() {
     // following line sets the RTC to the date & time this sketch was compiled
     RTC.adjust(DateTime(__DATE__, __TIME__));
   }
-  bootDateTime = RTC.now();
   lcd.text("RTC clock... OK\n", 0, 20);
   Serial.println(F("RTC clock... OK"));
 }
