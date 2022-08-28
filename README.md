@@ -19,6 +19,7 @@
 
 ![image](https://user-images.githubusercontent.com/34723487/187067340-477331f4-b862-49c1-86dd-66c240cce892.png)
 
+## 💻 Create a spreadsheet
 
 ## 👨‍💻 Modifying the program
 In order to modify the program you will need to follow all those following steps. If you have any issue during this procedure, please open an issue [here](https://github.com/barbierb/Arduino-TempLogger/issues/)
