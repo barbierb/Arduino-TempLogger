@@ -93,7 +93,23 @@ void loop() {
       line = httpsClient.readStringUntil('\n');  //Read Line by Line
       Serial.println(line); //Print response
     }
+    
+  } else {
+    
+    Serial.println("Reconnecting to WiFi...");
+    WiFi.disconnect();
+    WiFi.begin(ssid, pass);
+
+    Serial.println("Connecting");
+    while(WiFi.status() != WL_CONNECTED) {
+      delay(1000);
+      Serial.print(".");
+    }
+    Serial.println("");
+  
+    Serial.print("Connected to WiFi network with IP Address: ");
+    Serial.println(WiFi.localIP());
   }
   
-  delay(60000); // waits 60 seconds
+  delay(60*60*1000); // waits 60 mins
 }
