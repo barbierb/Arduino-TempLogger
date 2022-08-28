@@ -13,6 +13,13 @@
 
 ## 🖼️ Pictures & Videos
 
+![20220828_113409](https://user-images.githubusercontent.com/34723487/187067562-014bdd0a-953f-479a-a850-1a4af87c6e99.jpg)
+
+![image](https://user-images.githubusercontent.com/34723487/187067352-9e64cb54-f37c-4c52-bbde-9fea725c0b21.png)
+
+![image](https://user-images.githubusercontent.com/34723487/187067340-477331f4-b862-49c1-86dd-66c240cce892.png)
+
+
 ## 👨‍💻 Modifying the program
 In order to modify the program you will need to follow all those following steps. If you have any issue during this procedure, please open an issue [here](https://github.com/barbierb/Arduino-TempLogger/issues/)
 
