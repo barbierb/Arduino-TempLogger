@@ -9,7 +9,7 @@ const int httpsPort = 443;  // HTTPS
 
 // SHA-1 fingerprint of script.google.com 's certificate
 // determined using a web browser
-//const char fingerprint[] = "85 C8 F7 87 3C 4E 3D FA 70 C3 30 4A D5 C1 9F 30 07 F8 79 B2";
+// new fingerprint from script.google.com 's certificate, cannot be automatically handled.
 const char fingerprint[] = "B4 B4 14 59 B2 62 3D 11 1E 57 51 E0 86 6F 98 1C 98 91 C2 B1";
 
 // TEMPERATURE SENSOR & VARIABLES
@@ -55,8 +55,10 @@ void loop() {
     Serial.print(F("connecting to "));
     Serial.println(host);
   
-    Serial.printf("Using fingerprint '%s'\n", fingerprint);
-    httpsClient.setFingerprint(fingerprint);
+    //Serial.printf("Using fingerprint '%s'\n", fingerprint);
+    //httpsClient.setFingerprint(fingerprint);
+    httpsClient.setInsecure();
+    
     
     int r=0; //retry counter
     while((!httpsClient.connect(host, httpsPort)) && (r < 3)){
